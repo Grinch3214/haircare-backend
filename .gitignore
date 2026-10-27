@@ -4,6 +4,7 @@
 /build
 *.tsbuildinfo
 MVP.MD
+LEARNING.md
 
 # Logs
 logs
