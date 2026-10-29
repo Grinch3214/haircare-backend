@@ -39,6 +39,22 @@ scripts/                     # one-off utilities (.mjs)
 data/                        # Google Sheets snapshots, NOT in git (contains prices)
 ```
 
+## Nest architecture
+
+- Module order / dependency direction: `Database → Users → Auth`. Dependencies point one way only: `UsersService` knows nothing about auth (no passwords checks, no tokens) — it only reads/writes the `users` table. Auth imports Users, never the reverse.
+- `DatabaseModule` is `@Global()` and provides the Drizzle instance via DI. Don't create DB connections anywhere else.
+- Cross-cutting helpers (`@CurrentUser()`, `@Roles()`, shared guards) live in `src/common/`.
+- After `nest generate` run `npm run format` — on Windows it creates files with CRLF.
+
+## Auth
+
+- Access token: JWT, short-lived (15 min), returned in the response body; the frontend keeps it in memory and sends `Authorization: Bearer`.
+- Refresh token: long-lived, httpOnly cookie scoped to `/auth/refresh`. Stored hashed in a `sessions` table so it can be revoked (logout, logout everywhere, block).
+- Routes are open by default; protect explicitly with `@UseGuards(...)`. Admin controllers put the guard on the **class**, not per method. Frontend checks are UX only — the backend guard is the security.
+- Catalog uses an optional-auth guard: valid token → `request.user` is set (masters see wholesale prices); no token → guest, no 401.
+- JWT is verified by our own guard with `JwtService` (no `passport-jwt`). Passport is used only for Google OAuth.
+- JWT secrets and TTLs come from `Env`; `JwtModule.registerAsync` reads them via `ConfigService`.
+
 ## Database and schemas
 
 - Naming: `camelCase` in TS, `snake_case` in the DB, column name always explicit: `createdAt: timestamp('created_at', ...)`.
