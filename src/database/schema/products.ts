@@ -55,7 +55,6 @@ export const products = pgTable(
     }),
 
     // Наше
-    // Скидка на целую банку, вводит менеджер. null — скидки нет. Синк не трогает
     salePriceRetail: numeric('sale_price_retail', {
       precision: 10,
       scale: 2,
