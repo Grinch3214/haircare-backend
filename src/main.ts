@@ -8,6 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get<ConfigService<Env, true>>(ConfigService);
 
+  app.enableShutdownHooks();
   app.use(cookieParser());
   app.enableCors({
     origin: [config.get('CLIENT_URL', { infer: true })],

@@ -42,7 +42,7 @@ data/                        # Google Sheets snapshots, NOT in git (contains pri
 ## Nest architecture
 
 - Module order / dependency direction: `Database → Users → Auth`. Dependencies point one way only: `UsersService` knows nothing about auth (no passwords checks, no tokens) — it only reads/writes the `users` table. Auth imports Users, never the reverse.
-- `DatabaseModule` is `@Global()` and provides the Drizzle instance via DI. Don't create DB connections anywhere else.
+- `DatabaseModule` is `@Global()` and provides the Drizzle instance via DI. Don't create DB connections anywhere else. In a service: `constructor(@Inject(DRIZZLE) private readonly db: Database) {}` (both from `database/database.constants.ts`).
 - Cross-cutting helpers (`@CurrentUser()`, `@Roles()`, shared guards) live in `src/common/`.
 - After `nest generate` run `npm run format` — on Windows it creates files with CRLF.
 
