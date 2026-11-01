@@ -23,7 +23,8 @@
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "node --env-file=.env scripts/seed-superadmin.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

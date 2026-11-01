@@ -44,6 +44,8 @@ data/                        # Google Sheets snapshots, NOT in git (contains pri
 - Module order / dependency direction: `Database → Users → Auth`. Dependencies point one way only: `UsersService` knows nothing about auth (no passwords checks, no tokens) — it only reads/writes the `users` table. Auth imports Users, never the reverse.
 - `DatabaseModule` is `@Global()` and provides the Drizzle instance via DI. Don't create DB connections anywhere else. In a service: `constructor(@Inject(DRIZZLE) private readonly db: Database) {}` (both from `database/database.constants.ts`).
 - Cross-cutting helpers (`@CurrentUser()`, `@Roles()`, shared guards) live in `src/common/`.
+- Shared pure helpers live in `src/common/utils/<topic>.ts` (e.g. `email.ts` → `normalizeEmail`). **Check there before writing a new helper** — never duplicate one.
+- Extract a helper there when a second user exists or is already planned; a one-off helper with no known reuse stays in its file. Anything with dependencies (DB, config, other services) is an `@Injectable()` provider, not a util.
 - After `nest generate` run `npm run format` — on Windows it creates files with CRLF.
 
 ## Auth

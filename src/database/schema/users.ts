@@ -13,6 +13,7 @@ export const users = pgTable('users', {
   phone: text('phone'),
   avatarUrl: text('avatar_url'),
   role: platformRole('role').notNull().default('user'),
+  blockedAt: timestamp('blocked_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
