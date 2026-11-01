@@ -34,6 +34,7 @@ src/
   database/
     schema/<domain>.ts       # tables grouped by domain, all re-exported via schema/index.ts
     relations.ts             # all Drizzle relations
+docs/API.md                  # API reference for frontend developers
 drizzle/                     # migrations (in git)
 scripts/                     # one-off utilities (.mjs)
 data/                        # Google Sheets snapshots, NOT in git (contains prices)
@@ -58,6 +59,10 @@ data/                        # Google Sheets snapshots, NOT in git (contains pri
 - JWT secrets and TTLs come from `Env`; `JwtModule.registerAsync` reads them via `ConfigService`.
 - Never return a `User` row from a controller — map it with `toPublicUser()` (`users/public-user.ts`); the row contains `passwordHash`.
 - Login errors are identical for "no such email" and "wrong password" (401). Blocked user → 403, checked after the password.
+
+## API docs
+
+- `docs/API.md` is the contract for frontend developers. Any change to an endpoint (route, body, response, status codes, error messages) updates it **in the same change**.
 
 ## Request validation
 
