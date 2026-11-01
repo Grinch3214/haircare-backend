@@ -56,6 +56,13 @@ data/                        # Google Sheets snapshots, NOT in git (contains pri
 - Catalog uses an optional-auth guard: valid token → `request.user` is set (masters see wholesale prices); no token → guest, no 401.
 - JWT is verified by our own guard with `JwtService` (no `passport-jwt`). Passport is used only for Google OAuth.
 - JWT secrets and TTLs come from `Env`; `JwtModule.registerAsync` reads them via `ConfigService`.
+- Never return a `User` row from a controller — map it with `toPublicUser()` (`users/public-user.ts`); the row contains `passwordHash`.
+- Login errors are identical for "no such email" and "wrong password" (401). Blocked user → 403, checked after the password.
+
+## Request validation
+
+- Every request body is a DTO class in `<module>/dto/` validated by the global `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`, `transform`) — unknown fields are rejected with 400.
+- String normalization via `@Trim()` / `@NormalizeEmail()` from `common/decorators/transforms.ts`, not inline `@Transform` (it's typed `any`, eslint fails).
 
 ## Database and schemas
 

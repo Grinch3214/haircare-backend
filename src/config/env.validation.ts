@@ -1,3 +1,4 @@
+import type { JwtSignOptions } from '@nestjs/jwt';
 import { plainToInstance } from 'class-transformer';
 import {
   IsIn,
@@ -5,8 +6,10 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  Matches,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -38,6 +41,14 @@ export class Env {
 
   @IsString()
   APPS_SCRIPT_SECRET!: string;
+
+  @IsString()
+  @MinLength(32)
+  JWT_ACCESS_SECRET!: string;
+
+  @Matches(/^\d+(s|m|h|d)$/)
+  @IsOptional()
+  JWT_ACCESS_TTL: NonNullable<JwtSignOptions['expiresIn']> = '15m';
 }
 
 export function validateEnv(config: Record<string, unknown>): Env {
