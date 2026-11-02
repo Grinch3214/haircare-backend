@@ -55,7 +55,9 @@ data/                        # Google Sheets snapshots, NOT in git (contains pri
 - Refresh token: long-lived, httpOnly cookie scoped to `/auth/refresh`. Stored hashed in a `sessions` table so it can be revoked (logout, logout everywhere, block).
 - Routes are open by default; protect explicitly with `@UseGuards(...)`. Admin controllers put the guard on the **class**, not per method. Frontend checks are UX only — the backend guard is the security.
 - Catalog uses an optional-auth guard: valid token → `request.user` is set (masters see wholesale prices); no token → guest, no 401.
-- JWT is verified by our own guard with `JwtService` (no `passport-jwt`). Passport is used only for Google OAuth.
+- JWT is verified by our own `JwtAuthGuard` (`common/guards/`) with `JwtService` (no `passport-jwt`). Passport is used only for Google OAuth.
+- `JwtModule` is registered in `AuthModule` with `global: true`, so the guard works in any module without importing Auth.
+- Protected handler: `@UseGuards(JwtAuthGuard)` + `@CurrentUser() user: AuthUser` (`{ id, role }` from the token). Types `JwtPayload`, `AuthUser`, `AuthenticatedRequest` live in `common/types/auth.ts`. The token only proves identity — load the user from the DB when fresh data is needed.
 - JWT secrets and TTLs come from `Env`; `JwtModule.registerAsync` reads them via `ConfigService`.
 - Never return a `User` row from a controller — map it with `toPublicUser()` (`users/public-user.ts`); the row contains `passwordHash`.
 - Login errors are identical for "no such email" and "wrong password" (401). Blocked user → 403, checked after the password.

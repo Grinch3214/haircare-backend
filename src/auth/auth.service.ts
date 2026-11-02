@@ -6,13 +6,12 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import argon2 from 'argon2';
+import type { JwtPayload } from '../common/types/auth';
 import type { User } from '../database/schema';
 import { toPublicUser } from '../users/public-user';
 import { UsersService } from '../users/users.service';
 import type { LoginDto } from './dto/login.dto';
 import type { RegisterDto } from './dto/register.dto';
-
-export type JwtPayload = { sub: string; role: User['role'] };
 
 @Injectable()
 export class AuthService {

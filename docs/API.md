@@ -2,7 +2,7 @@
 
 Reference for frontend developers: what each endpoint accepts and returns.
 
-Status: **auth — register / login only.** Token refresh, `/users/me`, catalog and Google sign-in are not implemented yet.
+Status: **register, login, `/users/me`.** Token refresh, catalog and Google sign-in are not implemented yet.
 
 ## Basics
 
@@ -25,7 +25,14 @@ Login and register return an `accessToken` (JWT, valid **15 minutes**).
   ```
   `iat` / `exp` are Unix seconds. Never trust it for security decisions — the backend checks everything again.
 
-> No protected endpoints yet. After 15 minutes the user has to log in again until refresh is implemented.
+> Until refresh is implemented, after 15 minutes protected requests return `401` and the user has to log in again.
+
+Protected endpoints (marked 🔒 below) return `401` when:
+
+| `message` | Cause |
+|---|---|
+| `"Missing access token"` | no `Authorization` header, or it doesn't start with `Bearer ` |
+| `"Invalid or expired access token"` | token expired, malformed, or tampered with |
 
 ### Errors
 
@@ -143,6 +150,32 @@ Creates a user with role `user` and logs them in.
 | `401` | `"Invalid email or password"` | no such email **or** wrong password — intentionally the same, show one generic message |
 | `403` | `"User is blocked"` | account blocked by an admin |
 
+### 🔒 `GET /users/me`
+
+Returns the current user. Use it on app start to restore the session and to refresh profile data.
+
+**Headers:** `Authorization: Bearer <accessToken>`
+
+**`200 OK`** → `PublicUser`
+
+```json
+{
+  "id": "8e5ca49a-9e1c-4103-b5f3-5efc125ed78a",
+  "email": "admin@gmail.com",
+  "name": null,
+  "phone": null,
+  "avatarUrl": null,
+  "role": "superadmin"
+}
+```
+
+**Errors**
+
+| Status | `message` | When |
+|---|---|---|
+| `401` | see [Authentication](#authentication) | missing / invalid / expired token |
+| `401` | `"User no longer exists"` | token is valid but the user was deleted |
+
 ## Example (fetch)
 
 ```ts
@@ -157,5 +190,16 @@ async function login(email: string, password: string): Promise<AuthResponse> {
   const data = await res.json();
   if (!res.ok) throw data as ApiError;
   return data as AuthResponse;
+}
+
+async function getMe(accessToken: string): Promise<PublicUser> {
+  const res = await fetch(`${API_URL}/users/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    credentials: 'include',
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw data as ApiError;
+  return data as PublicUser;
 }
 ```
