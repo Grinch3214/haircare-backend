@@ -2,7 +2,7 @@
 
 Reference for frontend developers: what each endpoint accepts and returns.
 
-Status: **register, login, `/users/me`.** Token refresh, catalog and Google sign-in are not implemented yet.
+Status: **auth (register, login, refresh, logout) and `/users/me`.** Catalog and Google sign-in are not implemented yet.
 
 ## Basics
 
@@ -11,13 +11,22 @@ Status: **register, login, `/users/me`.** Token refresh, catalog and Google sign
 | Base URL (local) | `http://localhost:3000` |
 | Format | JSON in, JSON out. Send `Content-Type: application/json` |
 | Allowed origin | the value of `CLIENT_URL` on the server (local: `http://localhost:5173`) |
-| Credentials | send `credentials: 'include'` (fetch) / `withCredentials: true` (axios). Not used yet, required once the refresh cookie lands |
+| Credentials | **required** on every `/auth/*` request: `credentials: 'include'` (fetch) / `withCredentials: true` (axios). Without it the browser neither stores nor sends the refresh cookie |
 
 ### Authentication
 
-Login and register return an `accessToken` (JWT, valid **15 minutes**).
+Two tokens:
 
-- Keep it **in memory** (a Pinia store, a variable). Not in `localStorage`.
+| | Access token | Refresh token |
+|---|---|---|
+| What | JWT | random opaque string |
+| Lifetime | **15 minutes** | **30 days**, renewed on every refresh |
+| Where | response body → keep **in memory** (Pinia store). Not in `localStorage` | `refresh_token` cookie: `HttpOnly`, `SameSite=Lax`, `Path=/auth`. JS can't read it — the browser stores and sends it automatically |
+| Used for | `Authorization: Bearer` on protected requests | `POST /auth/refresh` only |
+
+Login, register and refresh return a new `accessToken` and set a new refresh cookie.
+
+- Keep the access token **in memory** (a Pinia store, a variable). Not in `localStorage`.
 - Send it on protected requests: `Authorization: Bearer <accessToken>`.
 - Its payload is readable on the frontend (base64), e.g. to check expiry:
   ```json
@@ -25,7 +34,12 @@ Login and register return an `accessToken` (JWT, valid **15 minutes**).
   ```
   `iat` / `exp` are Unix seconds. Never trust it for security decisions — the backend checks everything again.
 
-> Until refresh is implemented, after 15 minutes protected requests return `401` and the user has to log in again.
+#### Session flow on the frontend
+
+1. **App start / page reload** — the in-memory token is gone. Call `POST /auth/refresh`: `200` → logged in (you get `accessToken` + `user`, no need for `/users/me`); `401` → guest.
+2. **Protected request returns `401`** → call `POST /auth/refresh` once, then retry the request with the new token. If refresh fails → log out on the frontend.
+3. **Never run two refreshes at once.** Each refresh invalidates the previous cookie, so the second parallel call gets `401`. Keep one shared in-flight promise (see the example below). Two browser tabs can still race — the losing tab just refreshes again on its next `401`.
+4. **Logout** → `POST /auth/logout`, then drop the in-memory token.
 
 Protected endpoints (marked 🔒 below) return `401` when:
 
@@ -176,6 +190,40 @@ Returns the current user. Use it on app start to restore the session and to refr
 | `401` | see [Authentication](#authentication) | missing / invalid / expired token |
 | `401` | `"User no longer exists"` | token is valid but the user was deleted |
 
+### `POST /auth/refresh`
+
+Exchanges the refresh cookie for a new access token. The cookie is rotated: the old one stops working immediately.
+
+**Body:** none. **Cookie:** `refresh_token` (sent by the browser automatically with `credentials: 'include'`).
+
+**`200 OK`** → `AuthResponse` + new `refresh_token` cookie
+
+**Errors** (the cookie is cleared on every error)
+
+| Status | `message` | When |
+|---|---|---|
+| `401` | `"Missing refresh token"` | no cookie (never logged in, logged out, or `credentials` not set) |
+| `401` | `"Invalid or expired refresh token"` | expired, already used, or the session was revoked (logout / logout-all) |
+| `403` | `"User is blocked"` | account blocked — all its sessions are revoked |
+
+### `POST /auth/logout`
+
+Ends the current session (this browser). Works without an access token, so an expired user can still log out.
+
+**Body:** none. **Cookie:** `refresh_token`.
+
+**`204 No Content`** — always, even if there was no cookie. The cookie is cleared.
+
+### 🔒 `POST /auth/logout-all`
+
+Ends **all** sessions of the user on every device (e.g. "sign out everywhere" after a password leak). Already issued access tokens keep working until they expire (≤ 15 min).
+
+**Headers:** `Authorization: Bearer <accessToken>`
+
+**`204 No Content`** — the cookie is cleared.
+
+**Errors:** `401` — see [Authentication](#authentication).
+
 ## Example (fetch)
 
 ```ts
@@ -190,6 +238,25 @@ async function login(email: string, password: string): Promise<AuthResponse> {
   const data = await res.json();
   if (!res.ok) throw data as ApiError;
   return data as AuthResponse;
+}
+
+let refreshing: Promise<AuthResponse> | null = null;
+
+// One shared refresh for every caller that got 401 at the same time
+function refresh(): Promise<AuthResponse> {
+  refreshing ??= fetch(`${API_URL}/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+    .then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw data as ApiError;
+      return data as AuthResponse;
+    })
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
 }
 
 async function getMe(accessToken: string): Promise<PublicUser> {

@@ -5,6 +5,7 @@ import type { Env } from '../config/env.validation';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { SessionsService } from './sessions.service';
 
 @Module({
   imports: [
@@ -21,6 +22,6 @@ import { AuthService } from './auth.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, SessionsService],
 })
 export class AuthModule {}

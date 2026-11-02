@@ -3,6 +3,10 @@ import * as schema from './schema';
 
 export const relations = defineRelations(schema, (r) => ({
   users: {
+    sessions: r.many.sessions({
+      from: r.users.id,
+      to: r.sessions.userId,
+    }),
     memberships: r.many.storeMembers({
       from: r.users.id,
       to: r.storeMembers.userId,
@@ -10,6 +14,13 @@ export const relations = defineRelations(schema, (r) => ({
     stores: r.many.stores({
       from: r.users.id.through(r.storeMembers.userId),
       to: r.stores.id.through(r.storeMembers.storeId),
+    }),
+  },
+  sessions: {
+    user: r.one.users({
+      from: r.sessions.userId,
+      to: r.users.id,
+      optional: false,
     }),
   },
   stores: {

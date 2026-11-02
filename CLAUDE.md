@@ -52,7 +52,9 @@ data/                        # Google Sheets snapshots, NOT in git (contains pri
 ## Auth
 
 - Access token: JWT, short-lived (15 min), returned in the response body; the frontend keeps it in memory and sends `Authorization: Bearer`.
-- Refresh token: long-lived, httpOnly cookie scoped to `/auth/refresh`. Stored hashed in a `sessions` table so it can be revoked (logout, logout everywhere, block).
+- Refresh token: random 32 bytes (not a JWT), 30 days (`REFRESH_TOKEN_TTL_DAYS`). Cookie `refresh_token`: `httpOnly`, `sameSite: lax`, `path: /auth`, `secure` in production. Never in a response body.
+- One `sessions` row per device; only the **SHA-256** of the token is stored (fast hash is fine for random tokens and allows lookup; argon2 is for passwords). Rotated on every refresh with a conditional update on the old hash. Sessions logic lives in `auth/sessions.service.ts` — Users knows nothing about sessions.
+- Blocking a user = set `blockedAt` + `deleteAllForUser`. Login and refresh check `blockedAt`.
 - Routes are open by default; protect explicitly with `@UseGuards(...)`. Admin controllers put the guard on the **class**, not per method. Frontend checks are UX only — the backend guard is the security.
 - Catalog uses an optional-auth guard: valid token → `request.user` is set (masters see wholesale prices); no token → guest, no 401.
 - JWT is verified by our own `JwtAuthGuard` (`common/guards/`) with `JwtService` (no `passport-jwt`). Passport is used only for Google OAuth.
