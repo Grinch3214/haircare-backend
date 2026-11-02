@@ -14,6 +14,7 @@ import type { CookieOptions, Request, Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import type { AuthUser } from '../common/types/auth';
+import { API_PREFIX } from '../config/api';
 import type { Env } from '../config/env.validation';
 import { type AuthResult, AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -115,7 +116,7 @@ export class AuthController {
       httpOnly: true,
       secure: this.config.get('NODE_ENV', { infer: true }) === 'production',
       sameSite: 'lax',
-      path: '/auth',
+      path: `/${API_PREFIX}/auth`,
     };
   }
 }

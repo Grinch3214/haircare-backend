@@ -2,16 +2,16 @@
 
 Reference for frontend developers: what each endpoint accepts and returns.
 
-Status: **auth (register, login, refresh, logout) and `/users/me`.** Catalog and Google sign-in are not implemented yet.
+Status: **auth (register, login, refresh, logout) and `/api/users/me`.** Catalog and Google sign-in are not implemented yet.
 
 ## Basics
 
 | | |
 |---|---|
-| Base URL (local) | `http://localhost:3000` |
+| Base URL (local) | `http://localhost:3000/api` — every route below starts with `/api` |
 | Format | JSON in, JSON out. Send `Content-Type: application/json` |
 | Allowed origin | the value of `CLIENT_URL` on the server (local: `http://localhost:5173`) |
-| Credentials | **required** on every `/auth/*` request: `credentials: 'include'` (fetch) / `withCredentials: true` (axios). Without it the browser neither stores nor sends the refresh cookie |
+| Credentials | **required** on every `/api/auth/*` request: `credentials: 'include'` (fetch) / `withCredentials: true` (axios). Without it the browser neither stores nor sends the refresh cookie |
 
 ### Authentication
 
@@ -21,8 +21,8 @@ Two tokens:
 |---|---|---|
 | What | JWT | random opaque string |
 | Lifetime | **15 minutes** | **30 days**, renewed on every refresh |
-| Where | response body → keep **in memory** (Pinia store). Not in `localStorage` | `refresh_token` cookie: `HttpOnly`, `SameSite=Lax`, `Path=/auth`. JS can't read it — the browser stores and sends it automatically |
-| Used for | `Authorization: Bearer` on protected requests | `POST /auth/refresh` only |
+| Where | response body → keep **in memory** (Pinia store). Not in `localStorage` | `refresh_token` cookie: `HttpOnly`, `SameSite=Lax`, `Path=/api/auth`. JS can't read it — the browser stores and sends it automatically |
+| Used for | `Authorization: Bearer` on protected requests | `POST /api/auth/refresh` only |
 
 Login, register and refresh return a new `accessToken` and set a new refresh cookie.
 
@@ -36,10 +36,10 @@ Login, register and refresh return a new `accessToken` and set a new refresh coo
 
 #### Session flow on the frontend
 
-1. **App start / page reload** — the in-memory token is gone. Call `POST /auth/refresh`: `200` → logged in (you get `accessToken` + `user`, no need for `/users/me`); `401` → guest.
-2. **Protected request returns `401`** → call `POST /auth/refresh` once, then retry the request with the new token. If refresh fails → log out on the frontend.
+1. **App start / page reload** — the in-memory token is gone. Call `POST /api/auth/refresh`: `200` → logged in (you get `accessToken` + `user`, no need for `/api/users/me`); `401` → guest.
+2. **Protected request returns `401`** → call `POST /api/auth/refresh` once, then retry the request with the new token. If refresh fails → log out on the frontend.
 3. **Never run two refreshes at once.** Each refresh invalidates the previous cookie, so the second parallel call gets `401`. Keep one shared in-flight promise (see the example below). Two browser tabs can still race — the losing tab just refreshes again on its next `401`.
-4. **Logout** → `POST /auth/logout`, then drop the in-memory token.
+4. **Logout** → `POST /api/auth/logout`, then drop the in-memory token.
 
 Protected endpoints (marked 🔒 below) return `401` when:
 
@@ -102,7 +102,7 @@ Store roles (`admin` / `master` in a specific store) are not part of `PublicUser
 
 ## Endpoints
 
-### `POST /auth/register`
+### `POST /api/auth/register`
 
 Creates a user with role `user` and logs them in.
 
@@ -141,7 +141,7 @@ Creates a user with role `user` and logs them in.
 | `400` | `string[]` | validation failed, or an unknown field was sent (e.g. `role`) |
 | `409` | `"Email already registered"` | email taken (case-insensitive) |
 
-### `POST /auth/login`
+### `POST /api/auth/login`
 
 **Body**
 
@@ -164,7 +164,7 @@ Creates a user with role `user` and logs them in.
 | `401` | `"Invalid email or password"` | no such email **or** wrong password — intentionally the same, show one generic message |
 | `403` | `"User is blocked"` | account blocked by an admin |
 
-### 🔒 `GET /users/me`
+### 🔒 `GET /api/users/me`
 
 Returns the current user. Use it on app start to restore the session and to refresh profile data.
 
@@ -190,7 +190,7 @@ Returns the current user. Use it on app start to restore the session and to refr
 | `401` | see [Authentication](#authentication) | missing / invalid / expired token |
 | `401` | `"User no longer exists"` | token is valid but the user was deleted |
 
-### `POST /auth/refresh`
+### `POST /api/auth/refresh`
 
 Exchanges the refresh cookie for a new access token. The cookie is rotated: the old one stops working immediately.
 
@@ -206,7 +206,7 @@ Exchanges the refresh cookie for a new access token. The cookie is rotated: the 
 | `401` | `"Invalid or expired refresh token"` | expired, already used, or the session was revoked (logout / logout-all) |
 | `403` | `"User is blocked"` | account blocked — all its sessions are revoked |
 
-### `POST /auth/logout`
+### `POST /api/auth/logout`
 
 Ends the current session (this browser). Works without an access token, so an expired user can still log out.
 
@@ -214,7 +214,7 @@ Ends the current session (this browser). Works without an access token, so an ex
 
 **`204 No Content`** — always, even if there was no cookie. The cookie is cleared.
 
-### 🔒 `POST /auth/logout-all`
+### 🔒 `POST /api/auth/logout-all`
 
 Ends **all** sessions of the user on every device (e.g. "sign out everywhere" after a password leak). Already issued access tokens keep working until they expire (≤ 15 min).
 
@@ -228,7 +228,7 @@ Ends **all** sessions of the user on every device (e.g. "sign out everywhere" af
 
 ```ts
 async function login(email: string, password: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_URL}/auth/login`, {
+  const res = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -244,7 +244,7 @@ let refreshing: Promise<AuthResponse> | null = null;
 
 // One shared refresh for every caller that got 401 at the same time
 function refresh(): Promise<AuthResponse> {
-  refreshing ??= fetch(`${API_URL}/auth/refresh`, {
+  refreshing ??= fetch(`${API_URL}/api/auth/refresh`, {
     method: 'POST',
     credentials: 'include',
   })
@@ -260,7 +260,7 @@ function refresh(): Promise<AuthResponse> {
 }
 
 async function getMe(accessToken: string): Promise<PublicUser> {
-  const res = await fetch(`${API_URL}/users/me`, {
+  const res = await fetch(`${API_URL}/api/users/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     credentials: 'include',
   });

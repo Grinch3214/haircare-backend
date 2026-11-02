@@ -49,10 +49,25 @@ data/                        # Google Sheets snapshots, NOT in git (contains pri
 - Extract a helper there when a second user exists or is already planned; a one-off helper with no known reuse stays in its file. Anything with dependencies (DB, config, other services) is an `@Injectable()` provider, not a util.
 - After `nest generate` run `npm run format` — on Windows it creates files with CRLF.
 
+## API prefix
+
+- Every route is under `/api` (`app.setGlobalPrefix(API_PREFIX)`, constant in `config/api.ts`). Anything that depends on URL paths (cookie `path`, docs) must use `API_PREFIX`, not a hardcoded string.
+
+## Multi-store
+
+One store today, dozens possible later. Principle: **multi-store ready, single-store first** — build the seams (API shape, data ownership, one resolution point), not the features. Details: `MVP.MD` §7.
+
+- Store context comes from the `X-Store: <slug>` header (not the domain). Missing → 400, unknown or inactive → 404. The header only says *where*; permissions are always checked in the DB.
+- Store roles are per store (`store_members`): a master of store A is a regular customer in store B. User accounts are shared across stores. `superadmin` passes every store check.
+- Catalog responses are always built in a store context, even while all content is global.
+- Product content = global + optional per-store override. Resolve it in **one** place in the catalog service; never spread `coalesce(store, global)` logic across controllers.
+- Data ownership: stock/prices/discounts/sku — global only. Name/description/images — global, overridable per store. Visibility, branding, members — per store. `promotions.storeId = null` → shown in every store.
+- Global content is edited by `superadmin` only; store admins edit only their store's settings and overrides.
+
 ## Auth
 
 - Access token: JWT, short-lived (15 min), returned in the response body; the frontend keeps it in memory and sends `Authorization: Bearer`.
-- Refresh token: random 32 bytes (not a JWT), 30 days (`REFRESH_TOKEN_TTL_DAYS`). Cookie `refresh_token`: `httpOnly`, `sameSite: lax`, `path: /auth`, `secure` in production. Never in a response body.
+- Refresh token: random 32 bytes (not a JWT), 30 days (`REFRESH_TOKEN_TTL_DAYS`). Cookie `refresh_token`: `httpOnly`, `sameSite: lax`, `path: /api/auth`, `secure` in production. Never in a response body.
 - One `sessions` row per device; only the **SHA-256** of the token is stored (fast hash is fine for random tokens and allows lookup; argon2 is for passwords). Rotated on every refresh with a conditional update on the old hash. Sessions logic lives in `auth/sessions.service.ts` — Users knows nothing about sessions.
 - Blocking a user = set `blockedAt` + `deleteAllForUser`. Login and refresh check `blockedAt`.
 - Routes are open by default; protect explicitly with `@UseGuards(...)`. Admin controllers put the guard on the **class**, not per method. Frontend checks are UX only — the backend guard is the security.
