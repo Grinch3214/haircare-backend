@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { validateEnv } from './config/env.validation';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
+import { StoresModule } from './stores/stores.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -12,6 +13,7 @@ import { UsersModule } from './users/users.module';
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     DatabaseModule,
     UsersModule,
+    StoresModule,
     AuthModule,
   ],
   controllers: [AppController],

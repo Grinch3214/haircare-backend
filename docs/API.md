@@ -2,7 +2,7 @@
 
 Reference for frontend developers: what each endpoint accepts and returns.
 
-Status: **auth (register, login, refresh, logout) and `/api/users/me`.** Catalog and Google sign-in are not implemented yet.
+Status: **auth (register, login, refresh, logout), `/api/users/me`, stores (superadmin).** Store members, catalog and Google sign-in are not implemented yet.
 
 ## Basics
 
@@ -75,7 +75,8 @@ type ApiError = {
 |---|---|
 | `400` | request body failed validation; `message` lists every problem. Unknown fields are rejected too |
 | `401` | wrong credentials / missing or expired token |
-| `403` | authenticated, but not allowed (e.g. blocked user) |
+| `403` | authenticated, but not allowed (blocked user, or role too low: `"Insufficient role"`) |
+| `404` | resource not found |
 | `409` | conflict with existing data (e.g. email taken) |
 
 ## Types
@@ -99,6 +100,18 @@ type AuthResponse = {
 ```
 
 Store roles (`admin` / `master` in a specific store) are not part of `PublicUser` yet.
+
+```ts
+type Store = {
+  id: string;            // uuid
+  slug: string;          // the value frontends will send in X-Store
+  title: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;     // ISO date
+  updatedAt: string;
+};
+```
 
 ## Endpoints
 
@@ -223,6 +236,52 @@ Ends **all** sessions of the user on every device (e.g. "sign out everywhere" af
 **`204 No Content`** — the cookie is cleared.
 
 **Errors:** `401` — see [Authentication](#authentication).
+
+### Stores (superadmin)
+
+All endpoints below: 🔒 + role `superadmin`. Other users get `403 "Insufficient role"`.
+
+> The platform role is read from the access token, so after a role change it applies within ≤ 15 minutes (on the next refresh).
+
+#### 🔒 `GET /api/stores`
+
+**`200 OK`** → `Store[]`, sorted by title.
+
+#### 🔒 `POST /api/stores`
+
+**Body**
+
+| Field | Type | Rules |
+|---|---|---|
+| `slug` | string | required, 2–50, lowercase latin letters, digits and single hyphens (`hair-care`, `salon2`). **Cannot be changed later** — frontends use it |
+| `title` | string | required, 1–100, trimmed |
+| `description` | string | optional, max 1000, trimmed |
+
+```json
+{ "slug": "haircare", "title": "Haircare", "description": "Professional hair care" }
+```
+
+**`201 Created`** → `Store`
+
+| Status | `message` | When |
+|---|---|---|
+| `400` | `string[]` | validation failed |
+| `409` | `"Store slug already taken"` | slug exists |
+
+#### 🔒 `PATCH /api/stores/:id`
+
+Partial update — send only the fields you change.
+
+**Body:** any of `title`, `description` (same rules as above), `isActive` (boolean). `slug` is rejected.
+
+**`200 OK`** → `Store`
+
+| Status | `message` | When |
+|---|---|---|
+| `400` | `string[]` | validation failed, or `slug` sent |
+| `400` | `"Validation failed (uuid is expected)"` | `:id` is not a uuid |
+| `400` | `"Nothing to update"` | empty body |
+| `404` | `"Store not found"` | no store with this id |
 
 ## Example (fetch)
 

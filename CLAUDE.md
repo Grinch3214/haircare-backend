@@ -74,6 +74,7 @@ One store today, dozens possible later. Principle: **multi-store ready, single-s
 - Catalog uses an optional-auth guard: valid token → `request.user` is set (masters see wholesale prices); no token → guest, no 401.
 - JWT is verified by our own `JwtAuthGuard` (`common/guards/`) with `JwtService` (no `passport-jwt`). Passport is used only for Google OAuth.
 - `JwtModule` is registered in `AuthModule` with `global: true`, so the guard works in any module without importing Auth.
+- Platform roles: `@UseGuards(JwtAuthGuard, RolesGuard)` + `@Roles(['superadmin'])` (order matters — `RolesGuard` needs `request.user`). The role comes from the token, so a role change applies within ≤ 15 min.
 - Protected handler: `@UseGuards(JwtAuthGuard)` + `@CurrentUser() user: AuthUser` (`{ id, role }` from the token). Types `JwtPayload`, `AuthUser`, `AuthenticatedRequest` live in `common/types/auth.ts`. The token only proves identity — load the user from the DB when fresh data is needed.
 - JWT secrets and TTLs come from `Env`; `JwtModule.registerAsync` reads them via `ConfigService`.
 - Never return a `User` row from a controller — map it with `toPublicUser()` (`users/public-user.ts`); the row contains `passwordHash`.
@@ -85,6 +86,7 @@ One store today, dozens possible later. Principle: **multi-store ready, single-s
 
 ## Request validation
 
+- Update DTOs: `PartialType` / `OmitType` from `@nestjs/mapped-types`. In the service, reject an update where every value is `undefined` (400 "Nothing to update") — a DTO instance has the unsent fields as `undefined`, and Drizzle throws on an empty `set()`.
 - Every request body is a DTO class in `<module>/dto/` validated by the global `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`, `transform`) — unknown fields are rejected with 400.
 - String normalization via `@Trim()` / `@NormalizeEmail()` from `common/decorators/transforms.ts`, not inline `@Transform` (it's typed `any`, eslint fails).
 
