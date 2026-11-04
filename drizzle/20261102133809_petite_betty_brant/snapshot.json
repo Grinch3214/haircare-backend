@@ -1,0 +1,134 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "e9d8f4c4-50d6-40d5-a63f-2be6bf05d65a",
+  "prevIds": [
+    "3e3ef02c-515f-4aaa-9173-fbdac2015271"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "promotions",
+        "store_id"
+      ],
+      "writes": [
+        "s|col|public.promotions.store_id",
+        "n|col|public.promotions.store_id",
+        "e|col|public.promotions.store_id"
+      ],
+      "reads": [
+        "n|tbl|public.promotions",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "promotions",
+        "promotions_store_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.promotions_store_id_idx",
+        "n|idx|public.promotions_store_id_idx",
+        "e|idx|public.promotions_store_id_idx",
+        "n|rel|public.promotions_store_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.promotions",
+        "n|sch|public",
+        "n|col|public.promotions.store_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "promotions"
+      ],
+      "writes": [
+        "s|fk|public.promotions.promotions_store_id_stores_id_fkey",
+        "n|fk|public.promotions.promotions_store_id_stores_id_fkey",
+        "e|fk|public.promotions.promotions_store_id_stores_id_fkey",
+        "n|con|public.promotions.promotions_store_id_stores_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.promotions",
+        "n|sch|public",
+        "n|tbl|public.stores",
+        "n|sch|public",
+        "n|col|public.promotions.store_id",
+        "n|col|public.stores.id",
+        "e|uniqueness|public.stores.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "promotions",
+        "name": "store_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "promotions",
+        "name": "promotions_store_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "store_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "promotions",
+        "name": "promotions_store_id_stores_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "store_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "stores",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    }
+  ]
+}

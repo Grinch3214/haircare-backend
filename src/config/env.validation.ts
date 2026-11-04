@@ -49,6 +49,12 @@ export class Env {
   @Matches(/^\d+(s|m|h|d)$/)
   @IsOptional()
   JWT_ACCESS_TTL: NonNullable<JwtSignOptions['expiresIn']> = '15m';
+
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  @IsOptional()
+  REFRESH_TOKEN_TTL_DAYS: number = 30;
 }
 
 export function validateEnv(config: Record<string, unknown>): Env {

@@ -5,11 +5,13 @@ import type { Env } from '../config/env.validation';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { SessionsService } from './sessions.service';
 
 @Module({
   imports: [
     UsersModule,
     JwtModule.registerAsync({
+      global: true,
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) => ({
         secret: config.get('JWT_ACCESS_SECRET', { infer: true }),
@@ -20,6 +22,6 @@ import { AuthService } from './auth.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, SessionsService],
 })
 export class AuthModule {}
